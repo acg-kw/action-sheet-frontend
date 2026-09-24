@@ -1,0 +1,11 @@
+{
+  "env": {
+    "VITE_API_URL": "",
+    "VITE_WS_URL": ""
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.ahliacontracting.info/api/:path*" },
+    { "source": "/ws-direct", "destination": "https://api.ahliacontracting.info/ws-direct" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
