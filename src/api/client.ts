@@ -229,6 +229,11 @@ export const draftRecoveryApi = {
   deleteSnapshot: (fileName: string) => api.delete(`/api/admin/draft-recovery/${encodeURIComponent(fileName)}`),
 };
 
+// Stored attachment names start with an 8-character prefix added on upload
+// (e.g. "b6bbcfb1_report.pdf"). Same rule as AttachmentService.displayName.
+export const attachmentDisplayName = (storedName: string) =>
+  storedName.replace(/^[0-9a-f]{8}_/, '');
+
 // ========== Admin Config API ==========
 export const configApi = {
   getEmail: () => api.get('/api/admin/config/email'),
