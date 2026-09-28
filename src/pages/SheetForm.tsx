@@ -805,7 +805,6 @@ export default function SheetForm() {
       if (attachments.length > 0 && sheetId) {
         try {
           const uploadResult = await sheetsApi.uploadAttachments(sheetId, attachments)
-          console.log('Uploaded attachments:', uploadResult.data)
           message.success(`Draft saved with ${uploadResult.data.count} attachment(s)!`)
         } catch (uploadError) {
           console.error('Failed to upload attachments:', uploadError)
