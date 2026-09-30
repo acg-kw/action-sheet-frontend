@@ -31,7 +31,7 @@ import {
   EyeOutlined,
 } from '@ant-design/icons'
 import { useSheetsStore, useAuthStore } from '../store'
-import { projectsApi, sheetsApi } from '../api/client'
+import { projectsApi, sheetsApi, attachmentDisplayName } from '../api/client'
 import dayjs from 'dayjs'
 
 const { TextArea } = Input
@@ -582,7 +582,7 @@ export default function SheetDetail() {
         ) : attachments.length > 0 ? (
           <div style={{ marginTop: 16 }}>
             {attachments.map((fileName, index) => {
-              const displayName = fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName
+              const displayName = attachmentDisplayName(fileName)
               const downloadUrl = sheetsApi.downloadAttachment(id!, fileName)
               
               return (

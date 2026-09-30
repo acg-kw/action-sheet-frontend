@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button, message, Modal, Input, Tag, Tooltip, Progress } from 'antd'
 import { ArrowLeftOutlined, SaveOutlined, EyeOutlined, SendOutlined, ClearOutlined, PaperClipOutlined, PlusOutlined, DeleteOutlined, CloseCircleOutlined, SwapOutlined, FileOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useSheetsStore, useAuthStore } from '../store'
-import { employeesApi, sheetsApi, projectsApi, recipientShortcutsApi } from '../api/client'
+import { employeesApi, sheetsApi, projectsApi, recipientShortcutsApi, attachmentDisplayName } from '../api/client'
 import dayjs from 'dayjs'
 
 /* ════════════════════════════════════════
@@ -805,7 +805,6 @@ export default function SheetForm() {
       if (attachments.length > 0 && sheetId) {
         try {
           const uploadResult = await sheetsApi.uploadAttachments(sheetId, attachments)
-          console.log('Uploaded attachments:', uploadResult.data)
           message.success(`Draft saved with ${uploadResult.data.count} attachment(s)!`)
         } catch (uploadError) {
           console.error('Failed to upload attachments:', uploadError)
@@ -1236,7 +1235,7 @@ export default function SheetForm() {
                     style={{ fontSize: 12, fontWeight: 500, color: '#7c3aed', textDecoration: 'none', cursor: 'pointer' }}
                     onMouseOver={e => (e.currentTarget.style.textDecoration = 'underline')}
                     onMouseOut={e => (e.currentTarget.style.textDecoration = 'none')}>
-                    {fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName}
+                    {attachmentDisplayName(fileName)}
                   </a>
                   <Tag color="purple" style={{ fontSize: 9, lineHeight: '16px', padding: '0 4px' }}>Saved</Tag>
                 </div>
@@ -1248,7 +1247,7 @@ export default function SheetForm() {
                     />
                   </Tooltip>
                   <Tooltip title="Download">
-                    <a href={id ? sheetsApi.downloadAttachment(id, fileName) : '#'} download={fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName} style={{ display: 'inline-flex' }}>
+                    <a href={id ? sheetsApi.downloadAttachment(id, fileName) : '#'} download={attachmentDisplayName(fileName)} style={{ display: 'inline-flex' }}>
                       <Button type="text" size="small" icon={<DownloadOutlined />}
                         style={{ fontSize: 11, color: '#2563eb' }}
                       />
