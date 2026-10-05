@@ -45,10 +45,34 @@ export interface User {
 }
 
 // ========== Auth Store ==========
+// 'change': the password is correct, but the user must choose a new one first.
+export type LoginResult = 'ok' | 'change' | 'fail';
+
+// Saves the session returned by /login or /change-password.
+function storeSession(data: any): User {
+  const user: User = {
+    email: data.email,
+    name: data.name,
+    role: data.role || 'User',
+    department: data.department || '',
+    hierarchyLevel: data.hierarchyLevel || 5,
+  };
+  // The token is what authorises every later API call. Without it the
+  // backend rejects requests with 401, so store it before marking the
+  // user as signed in.
+  if (data.token) {
+    localStorage.setItem('authToken', data.token);
+  }
+  localStorage.setItem('user', JSON.stringify(user));
+  return user;
+}
+
 interface AuthState {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password?: string) => Promise<boolean>;
+  login: (email: string, password?: string) => Promise<LoginResult>;
+  // Resolves to null on success, otherwise the message to show.
+  changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<string | null>;
   logout: () => void;
   loadUser: () => void;
 }
@@ -61,27 +85,30 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const response = await authApi.login(email, password);
-      const data = response.data;
-      const user: User = {
-        email: data.email,
-        name: data.name,
-        role: data.role || 'User',
-        department: data.department || '',
-        hierarchyLevel: data.hierarchyLevel || 5,
-      };
-      // The token is what authorises every later API call. Without it the
-      // backend rejects requests with 401, so store it before marking the
-      // user as signed in.
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
+      if (response.data?.mustChangePassword) {
+        set({ isLoading: false });
+        return 'change';
       }
-      localStorage.setItem('user', JSON.stringify(user));
+      const user = storeSession(response.data);
       set({ user, isLoading: false });
-      return true;
+      return 'ok';
     } catch (error: any) {
       set({ isLoading: false });
-      console.error('Login error:', error.response?.status, error.response?.data || error.message);
-      return false;
+      console.error('Login error:', error.response?.status);
+      return 'fail';
+    }
+  },
+
+  changePassword: async (email: string, currentPassword: string, newPassword: string) => {
+    set({ isLoading: true });
+    try {
+      const response = await authApi.changePassword(email, currentPassword, newPassword);
+      const user = storeSession(response.data);
+      set({ user, isLoading: false });
+      return null;
+    } catch (error: any) {
+      set({ isLoading: false });
+      return error.response?.data?.error || 'The password could not be changed. Please try again.';
     }
   },
 

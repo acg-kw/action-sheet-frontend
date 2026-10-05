@@ -7,16 +7,21 @@ import MaintenanceBanner from '../components/MaintenanceBanner'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
+  // Set when the password was correct but a new one must be chosen first.
+  // The current password is kept only in memory, to confirm the change.
+  const [mustChange, setMustChange] = useState<{ email: string; currentPassword: string } | null>(null)
   const navigate = useNavigate()
-  const { login } = useAuthStore()
+  const { login, changePassword } = useAuthStore()
 
   const onFinish = async (values: { email: string; password?: string }) => {
     setLoading(true)
     try {
-      const success = await login(values.email, values.password)
-      if (success) {
+      const result = await login(values.email, values.password)
+      if (result === 'ok') {
         message.success('Welcome back!')
         navigate('/')
+      } else if (result === 'change') {
+        setMustChange({ email: values.email, currentPassword: values.password || '' })
       } else {
         message.error('Invalid email or password')
       }
@@ -30,6 +35,23 @@ export default function Login() {
         message.error(error.response.data.message)
       } else {
         message.error('Login failed. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onChangePassword = async (values: { newPassword: string }) => {
+    if (!mustChange) return
+    setLoading(true)
+    try {
+      const problem = await changePassword(mustChange.email, mustChange.currentPassword, values.newPassword)
+      if (problem) {
+        message.error(problem)
+      } else {
+        setMustChange(null)
+        message.success('Password changed. Welcome back!')
+        navigate('/')
       }
     } finally {
       setLoading(false)
@@ -83,6 +105,64 @@ export default function Login() {
           </p>
         </div>
 
+        {mustChange ? (
+          <Form name="change-password" onFinish={onChangePassword} layout="vertical" size="large">
+            <p style={{ color: '#555', fontSize: '0.88rem', marginBottom: 20, textAlign: 'center' }}>
+              For security, please choose a new password before continuing.
+              You only need to do this once.
+            </p>
+            <Form.Item
+              name="newPassword"
+              rules={[
+                { required: true, message: 'Please enter a new password' },
+                { min: 8, message: 'At least 8 characters' },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#aaa' }} />}
+                placeholder="New password (at least 8 characters)"
+                autoComplete="new-password"
+                style={{ height: 48, fontSize: '0.95rem', borderRadius: 8, border: '1px solid var(--border)' }}
+              />
+            </Form.Item>
+            <Form.Item
+              name="confirmPassword"
+              dependencies={['newPassword']}
+              rules={[
+                { required: true, message: 'Please confirm the new password' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    return !value || getFieldValue('newPassword') === value
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('The two passwords do not match'))
+                  },
+                }),
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#aaa' }} />}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                style={{ height: 48, fontSize: '0.95rem', borderRadius: 8, border: '1px solid var(--border)' }}
+              />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                block
+                icon={<ArrowRightOutlined />}
+                style={{ height: 48, fontSize: '0.95rem', fontWeight: 600, borderRadius: 8, background: '#800000', borderColor: '#800000' }}
+              >
+                Save new password
+              </Button>
+            </Form.Item>
+            <Button type="link" block style={{ marginTop: 8, color: '#888' }} onClick={() => setMustChange(null)}>
+              Back to sign in
+            </Button>
+          </Form>
+        ) : (
         <Form name="login" onFinish={onFinish} layout="vertical" size="large">
           <Form.Item
             name="email"
@@ -140,6 +220,7 @@ export default function Login() {
             </Button>
           </Form.Item>
         </Form>
+        )}
 
         <div style={{
           textAlign: 'center', marginTop: 28, paddingTop: 16,
