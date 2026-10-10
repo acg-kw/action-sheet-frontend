@@ -18,11 +18,15 @@ interface DeletedSheet {
   createdDate: string
   deletedAt: string
   deletedBy: string
+  purgeOn?: string
   formData?: Record<string, any>
 }
 
-// Must match app.trash.retention-days on the server.
+// Shown in the text. The date of each sheet comes from the server (purgeOn).
 const RETENTION_DAYS = 30
+
+const purgeDate = (r: DeletedSheet) =>
+  r.purgeOn ? dayjs(r.purgeOn) : dayjs(r.deletedAt).add(RETENTION_DAYS, 'day')
 
 export default function Trash() {
   const navigate = useNavigate()
@@ -142,10 +146,10 @@ export default function Trash() {
       title: 'Deleted permanently on',
       key: 'purgeOn',
       width: 190,
-      sorter: (a, b) => dayjs(a.deletedAt).unix() - dayjs(b.deletedAt).unix(),
+      sorter: (a, b) => purgeDate(a).unix() - purgeDate(b).unix(),
       render: (_, r) => {
         if (!r.deletedAt) return '—'
-        const purgeOn = dayjs(r.deletedAt).add(RETENTION_DAYS, 'day')
+        const purgeOn = purgeDate(r)
         const daysLeft = Math.max(0, purgeOn.startOf('day').diff(dayjs().startOf('day'), 'day'))
         return (
           <span>
