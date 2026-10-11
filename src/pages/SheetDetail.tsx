@@ -517,6 +517,7 @@ export default function SheetDetail() {
             Override Note
           </label>
           <TextArea
+            dir="auto"
             rows={3}
             value={overrideData.note}
             onChange={(e) => setOverrideData((d) => ({ ...d, note: e.target.value }))}
@@ -542,7 +543,7 @@ export default function SheetDetail() {
                 : entry.response?.includes('REJECT') ? 'red' : 'blue',
               children: (
                 <div>
-                  <div style={{ fontWeight: 500 }}>{entry.response}</div>
+                  <div dir="auto" style={{ fontWeight: 500 }}>{entry.response}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     {entry.email}
                     {entry.senderRole && <Tag style={{ marginLeft: 6, fontSize: '0.65rem' }}>{entry.senderRole}</Tag>}

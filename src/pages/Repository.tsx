@@ -641,6 +641,7 @@ export default function Repository() {
         
         <div className="header-controls">
           <Input 
+            dir="auto"
             className="header-search-input"
             prefix={<SearchOutlined style={{ color: '#9CA3AF' }} />} 
             placeholder="Search documents, tags, types..." 
@@ -914,14 +915,14 @@ export default function Repository() {
         </div>
         <Form form={form} layout="vertical" onFinish={saveMetadata}>
           <Form.Item name="documentType" label="Document Type">
-            <Input placeholder="e.g. Invoice, Action Sheet, Contract" />
+            <Input dir="auto" placeholder="e.g. Invoice, Action Sheet, Contract" />
           </Form.Item>
           <div style={{ display: 'flex', gap: 16 }}>
             <Form.Item name="documentNumber" label="Document Number" style={{ flex: 1 }}>
-              <Input placeholder="e.g. INV-2026-01" />
+              <Input dir="auto" placeholder="e.g. INV-2026-01" />
             </Form.Item>
             <Form.Item name="customerName" label="Customer Name" style={{ flex: 1 }}>
-              <Input placeholder="e.g. Acme Corp" />
+              <Input dir="auto" placeholder="e.g. Acme Corp" />
             </Form.Item>
           </div>
           <Form.Item name="status" label="Status">

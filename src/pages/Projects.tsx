@@ -198,7 +198,7 @@ export default function Projects() {
 
       <Modal title="New Project" open={addModal} onOk={handleAdd} onCancel={() => setAddModal(false)} okText="Create">
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Project Name" rules={[{ required: true }]}><Input placeholder="e.g. Mercedes Shuwaikh" /></Form.Item>
+          <Form.Item name="name" label="Project Name" rules={[{ required: true }]}><Input dir="auto" placeholder="e.g. Mercedes Shuwaikh" /></Form.Item>
         </Form>
       </Modal>
     </div>

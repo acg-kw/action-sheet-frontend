@@ -575,6 +575,7 @@ export default function Dashboard() {
             Project Name
           </label>
           <Input
+            dir="auto"
             size="large"
             placeholder="e.g. Mercedes Workshop, KDC Tower..."
             value={newProjectName}

@@ -321,6 +321,7 @@ export default function ReviewHub() {
                 Note (optional)
               </label>
               <TextArea
+                dir="auto"
                 rows={3}
                 value={markNote}
                 onChange={e => setMarkNote(e.target.value)}
