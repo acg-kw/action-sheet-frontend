@@ -5,7 +5,6 @@ import {
   ArrowLeftOutlined,
   DeleteOutlined,
   UndoOutlined,
-  ExclamationCircleOutlined,
   EyeOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
@@ -19,8 +18,15 @@ interface DeletedSheet {
   createdDate: string
   deletedAt: string
   deletedBy: string
+  purgeOn?: string
   formData?: Record<string, any>
 }
+
+// Shown in the text. The date of each sheet comes from the server (purgeOn).
+const RETENTION_DAYS = 30
+
+const purgeDate = (r: DeletedSheet) =>
+  r.purgeOn ? dayjs(r.purgeOn) : dayjs(r.deletedAt).add(RETENTION_DAYS, 'day')
 
 export default function Trash() {
   const navigate = useNavigate()
@@ -59,62 +65,6 @@ export default function Trash() {
         } catch (error) {
           console.error('Failed to restore sheet:', error)
           message.error('Failed to restore action sheet')
-        }
-      },
-    })
-  }
-
-  const handlePermanentDelete = (sheet: DeletedSheet) => {
-    Modal.confirm({
-      title: 'Permanently Delete',
-      icon: <ExclamationCircleOutlined />,
-      content: (
-        <div>
-          <p>Permanently delete "{sheet.title}"?</p>
-          <p style={{ color: '#ef4444', fontWeight: 600 }}>
-            ⚠️ This action cannot be undone!
-          </p>
-        </div>
-      ),
-      okText: 'Delete Permanently',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          // TODO: Implement permanent delete endpoint
-          // await sheetsApi.permanentDelete(sheet.id)
-          message.success('Action sheet permanently deleted')
-          fetchDeletedSheets()
-        } catch (error) {
-          console.error('Failed to permanently delete sheet:', error)
-          message.error('Failed to delete action sheet')
-        }
-      },
-    })
-  }
-
-  const handleEmptyTrash = () => {
-    Modal.confirm({
-      title: 'Empty Trash',
-      icon: <ExclamationCircleOutlined />,
-      content: (
-        <div>
-          <p>Permanently delete all {deletedSheets.length} action sheets in trash?</p>
-          <p style={{ color: '#ef4444', fontWeight: 600 }}>
-            ⚠️ This action cannot be undone!
-          </p>
-        </div>
-      ),
-      okText: 'Empty Trash',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          // TODO: Implement empty trash endpoint
-          // await sheetsApi.emptyTrash()
-          message.success('Trash emptied successfully')
-          fetchDeletedSheets()
-        } catch (error) {
-          console.error('Failed to empty trash:', error)
-          message.error('Failed to empty trash')
         }
       },
     })
@@ -193,6 +143,25 @@ export default function Trash() {
       },
     },
     {
+      title: 'Deleted permanently on',
+      key: 'purgeOn',
+      width: 190,
+      sorter: (a, b) => purgeDate(a).unix() - purgeDate(b).unix(),
+      render: (_, r) => {
+        if (!r.deletedAt) return '—'
+        const purgeOn = purgeDate(r)
+        const daysLeft = Math.max(0, purgeOn.startOf('day').diff(dayjs().startOf('day'), 'day'))
+        return (
+          <span>
+            {purgeOn.format('DD MMM YYYY')}{' '}
+            <Tag color={daysLeft <= 3 ? 'red' : daysLeft <= 7 ? 'orange' : 'default'}>
+              {daysLeft === 0 ? 'tonight' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`}
+            </Tag>
+          </span>
+        )
+      },
+    },
+    {
       title: 'Created',
       dataIndex: 'createdDate',
       key: 'createdDate',
@@ -229,15 +198,6 @@ export default function Trash() {
               style={{ color: '#16a34a' }}
             />
           </Tooltip>
-          <Tooltip title="Delete Permanently">
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handlePermanentDelete(r)}
-            />
-          </Tooltip>
         </div>
       ),
     },
@@ -261,20 +221,9 @@ export default function Trash() {
             </h1>
           </div>
           <p className="page-subtitle">
-            {deletedSheets.length} deleted action sheet(s) · Restore or permanently delete
+            {deletedSheets.length} deleted action sheet(s) · Kept for {RETENTION_DAYS} days, then deleted
+            permanently with their files. Restore a sheet to keep it.
           </p>
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {deletedSheets.length > 0 && (
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={handleEmptyTrash}
-              style={{ height: 40 }}
-            >
-              Empty Trash
-            </Button>
-          )}
         </div>
       </div>
 
@@ -292,8 +241,8 @@ export default function Trash() {
             <div className="empty-state-icon">🗑️</div>
             <div className="empty-state-title">Trash is empty</div>
             <div className="empty-state-desc">
-              Deleted action sheets will appear here. You can restore them or delete them
-              permanently.
+              Deleted action sheets will appear here. They can be restored for {RETENTION_DAYS} days,
+              then they are deleted permanently.
             </div>
           </div>
         ) : (
