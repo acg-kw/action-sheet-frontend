@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { sheetsApi, authApi } from '../api/client';
+import { sheetsApi, authApi, setSessionRejectedHandler } from '../api/client';
 
 // ========== Types ==========
 export interface ActionSheet {
@@ -12,6 +12,7 @@ export interface ActionSheet {
   deleted: boolean;
   deletedAt?: string;
   deletedBy?: string;
+  purgeOn?: string;
   lastModified: number;
   hasConflict: boolean;
   conflictSeverity?: string;
@@ -70,16 +71,20 @@ function storeSession(data: any): User {
 interface AuthState {
   user: User | null;
   isLoading: boolean;
+  // True after the server rejected the session; the login page says so.
+  sessionEnded: boolean;
   login: (email: string, password?: string) => Promise<LoginResult>;
   // Resolves to null on success, otherwise the message to show.
   changePassword: (email: string, currentPassword: string, newPassword: string) => Promise<string | null>;
   logout: () => void;
+  endSession: () => void;
   loadUser: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
+  sessionEnded: false,
 
   login: async (email: string, password?: string) => {
     set({ isLoading: true });
@@ -90,7 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         return 'change';
       }
       const user = storeSession(response.data);
-      set({ user, isLoading: false });
+      set({ user, isLoading: false, sessionEnded: false });
       return 'ok';
     } catch (error: any) {
       set({ isLoading: false });
@@ -104,7 +109,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await authApi.changePassword(email, currentPassword, newPassword);
       const user = storeSession(response.data);
-      set({ user, isLoading: false });
+      set({ user, isLoading: false, sessionEnded: false });
       return null;
     } catch (error: any) {
       set({ isLoading: false });
@@ -115,11 +120,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('user');
     localStorage.removeItem('authToken');
-    set({ user: null });
+    set({ user: null, sessionEnded: false });
+  },
+
+  // The server answered 401: the session is over. With user = null the
+  // router shows the login page at once, instead of an empty dashboard.
+  endSession: () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    set({ user: null, sessionEnded: true });
   },
 
   loadUser: () => {
     const stored = localStorage.getItem('user');
+    // A saved user without a token cannot open anything (every request is
+    // refused), so start on the login page instead.
+    if (stored && !localStorage.getItem('authToken')) {
+      localStorage.removeItem('user');
+      return;
+    }
     if (stored) {
       try {
         set({ user: JSON.parse(stored) });
@@ -129,6 +148,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+
+setSessionRejectedHandler(() => useAuthStore.getState().endSession());
 
 // ========== Sheets Store ==========
 interface SheetsState {

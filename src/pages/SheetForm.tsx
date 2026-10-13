@@ -57,6 +57,9 @@ function AutoShrinkInput({
       onChange={onChange}
       className={className}
       style={{ ...style, fontSize: `${fontSize}px`, transition: 'font-size 0.15s ease' }}
+      // Arabic starts from the right, English from the left. The browser
+      // decides per field from what is typed; callers can still override.
+      dir="auto"
       {...rest}
     />
   )
@@ -268,6 +271,7 @@ function EmployeeSelectionDialog({
         {/* Search bar */}
         <div style={{ padding: '8px 12px', borderBottom: '1px solid #e5e5e5' }}>
           <Input
+            dir="auto"
             placeholder={searchMode ? "Type to search employees..." : "Filter employees..."}
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
@@ -329,9 +333,9 @@ function AddEmployeeDialog({ role, onClose, onAdded }: { role: string; onClose: 
           <span>Add Employee — {role}</span>
         </div>
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div><label style={{ fontSize: 12, fontWeight: 600 }}>Name *</label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 600 }}>Name *</label><Input dir="auto" value={name} onChange={e => setName(e.target.value)} /></div>
           <div><label style={{ fontSize: 12, fontWeight: 600 }}>Email *</label><Input value={email} onChange={e => setEmail(e.target.value)} /></div>
-          <div><label style={{ fontSize: 12, fontWeight: 600 }}>Department</label><Input value={dept} onChange={e => setDept(e.target.value)} /></div>
+          <div><label style={{ fontSize: 12, fontWeight: 600 }}>Department</label><Input dir="auto" value={dept} onChange={e => setDept(e.target.value)} /></div>
           <div><label style={{ fontSize: 12, fontWeight: 600 }}>Active Directory</label><Input value={ad} onChange={e => setAd(e.target.value)} /></div>
         </div>
         <div className="employee-dialog-footer">
@@ -563,6 +567,14 @@ export default function SheetForm() {
   useEffect(() => {
     if (id) fetchSheet(id)
   }, [id, fetchSheet])
+
+  // A sheet in the Trash cannot be edited (the server refuses it): back to its page.
+  useEffect(() => {
+    if (isEdit && id && currentSheet?.id === id && currentSheet.deleted) {
+      message.warning('This sheet is in the Trash. Restore it before you edit it.')
+      navigate(`/sheet/${id}`, { replace: true })
+    }
+  }, [isEdit, id, currentSheet, navigate])
 
   // Load fixed recipients from the server
   useEffect(() => {
@@ -1461,6 +1473,7 @@ export default function SheetForm() {
             <span style={{ direction: 'rtl' }}>:الرد</span>
           </div>
           <textarea
+            dir="auto"
             value={response}
             onChange={e => {
               setResponse(e.target.value)

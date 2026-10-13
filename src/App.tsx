@@ -25,6 +25,10 @@ function AuthenticatedApp() {
   const { user } = useAuthStore()
   useWebSocket()
   const isReadOnly = user?.role?.toLowerCase() === 'viewer' || user?.role?.toLowerCase() === "ex.m's"
+  // Admin pages open only for the admin role; anyone else typing the address
+  // lands on the dashboard. The server refuses their data to others as well.
+  const isAdmin = user?.role?.toLowerCase() === 'admin'
+  const adminOnly = (page: JSX.Element) => (isAdmin ? page : <Navigate to="/" replace />)
   if (!user) return <Navigate to="/login" replace />
   return (
     <Routes>
@@ -38,16 +42,16 @@ function AuthenticatedApp() {
             <Route path="/sheet/new" element={isReadOnly ? <Navigate to="/" replace /> : <SheetForm />} />
             <Route path="/sheet/:id" element={<SheetDetail />} />
             <Route path="/sheet/:id/edit" element={isReadOnly ? <Navigate to="/" replace /> : <SheetForm />} />
-            <Route path="/employees" element={<Employees />} />
+            <Route path="/employees" element={adminOnly(<Employees />)} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:projectId" element={<Projects />} />
             <Route path="/repository" element={<Repository />} />
             <Route path="/insights" element={<MonthlyInsights />} />
             <Route path="/conflicts" element={<ConflictsView />} />
             <Route path="/review-hub" element={<ReviewHub />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/admin/trash" element={<Trash />} />
-            <Route path="/admin/draft-recovery" element={<DraftRecovery />} />
+            <Route path="/settings" element={adminOnly(<Settings />)} />
+            <Route path="/admin/trash" element={adminOnly(<Trash />)} />
+            <Route path="/admin/draft-recovery" element={adminOnly(<DraftRecovery />)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AppLayout>

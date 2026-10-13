@@ -124,8 +124,8 @@ export default function Employees() {
       {/* Add User Modal */}
       <Modal title="Add User" open={addModal} onOk={handleAdd} onCancel={() => setAddModal(false)} okText="Add">
         <Form form={addForm} layout="vertical">
-          <Form.Item name="username" label="Username" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input /></Form.Item>
+          <Form.Item name="username" label="Username" rules={[{ required: true }]}><Input dir="auto" /></Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}><Input dir="auto" /></Form.Item>
           <Form.Item name="password" label="Password" rules={[{ required: true }]}><Input.Password /></Form.Item>
           <Form.Item name="role" label="Role" initialValue="user">
             <Select options={[
@@ -143,7 +143,7 @@ export default function Employees() {
       <Modal title={`Edit — ${editModal?.username}`} open={!!editModal} onOk={handleEdit}
         onCancel={() => setEditModal(null)} okText="Save">
         <Form form={editForm} layout="vertical">
-          <Form.Item name="username" label="Username" rules={[{ required: true }]}><Input /></Form.Item>
+          <Form.Item name="username" label="Username" rules={[{ required: true }]}><Input dir="auto" /></Form.Item>
           <Form.Item name="role" label="Role">
             <Select options={[
               { value: 'admin', label: 'Admin' },

@@ -470,6 +470,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Project Name
           </label>
           <Input
+            dir="auto"
             size="large"
             placeholder="e.g. Mercedes Workshop, KDC Tower..."
             value={newProjectName}

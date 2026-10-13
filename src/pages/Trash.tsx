@@ -70,6 +70,26 @@ export default function Trash() {
     })
   }
 
+  const handleDeletePermanently = (sheet: DeletedSheet) => {
+    Modal.confirm({
+      title: 'Delete permanently',
+      icon: <DeleteOutlined style={{ color: '#ef4444' }} />,
+      content: `Delete "${sheet.title}" now, with its attachments and PDF? This cannot be undone.`,
+      okText: 'Delete permanently',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await sheetsApi.deletePermanently(sheet.id)
+          message.success('Action sheet deleted permanently')
+          fetchDeletedSheets()
+        } catch (error) {
+          console.error('Failed to delete sheet permanently:', error)
+          message.error('Failed to delete action sheet')
+        }
+      },
+    })
+  }
+
   const columns: ColumnsType<DeletedSheet> = [
     {
       title: 'Sheet',
@@ -198,6 +218,15 @@ export default function Trash() {
               style={{ color: '#16a34a' }}
             />
           </Tooltip>
+          <Tooltip title="Delete permanently">
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeletePermanently(r)}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -222,7 +251,7 @@ export default function Trash() {
           </div>
           <p className="page-subtitle">
             {deletedSheets.length} deleted action sheet(s) · Kept for {RETENTION_DAYS} days, then deleted
-            permanently with their files. Restore a sheet to keep it.
+            permanently with their files. Restore a sheet to keep it, or delete it permanently now.
           </p>
         </div>
       </div>
