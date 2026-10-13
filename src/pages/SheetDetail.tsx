@@ -392,7 +392,8 @@ export default function SheetDetail() {
                 icon={<UndoOutlined />}
                 size="large"
                 onClick={handleRestore}
-                style={{ height: 40, color: '#16a34a', borderColor: '#16a34a' }}
+                className="btn-restore"
+                style={{ height: 40 }}
               >
                 Restore
               </Button>

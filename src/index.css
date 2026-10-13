@@ -748,6 +748,22 @@ body {
   border-color: var(--border-hover) !important;
   color: var(--text-primary) !important;
 }
+/* Sheet page actions: the two rules above would otherwise make a disabled
+   button (sheet in the Trash) look clickable, and hide the Restore and
+   Delete colours. */
+.detail-header-actions .ant-btn:disabled {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border) !important;
+  color: var(--text-muted) !important;
+}
+.detail-header-actions .ant-btn.btn-restore {
+  color: var(--success) !important;
+  border-color: var(--success) !important;
+}
+.detail-header-actions .ant-btn-dangerous:not(:disabled) {
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
 
 /* Inputs */
 .ant-input,
