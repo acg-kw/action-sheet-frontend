@@ -27,6 +27,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// What happens when the server rejects the session (401). The auth store
+// replaces this so the app signs out in place and the router shows the login
+// page - no page reload, so it also works inside the desktop app. Loading
+// /login is only the fallback.
+let onSessionRejected = () => {
+  localStorage.removeItem('user');
+  localStorage.removeItem('authToken');
+  window.location.href = '/login';
+};
+
+export function setSessionRejectedHandler(handler: () => void) {
+  onSessionRejected = handler;
+}
+
+// The sign-in requests answer a wrong password with 401 as well. The login
+// page shows that message itself; it is not a rejected session.
+const SIGN_IN_PATHS = ['/api/auth/login', '/api/auth/change-password'];
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
@@ -39,12 +57,10 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !SIGN_IN_PATHS.includes(error.config?.url)) {
       // Token missing, expired or rejected - clear it so the next sign-in
       // issues a fresh one rather than replaying a dead token.
-      localStorage.removeItem('user');
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      onSessionRejected();
     }
     return Promise.reject(error);
   }

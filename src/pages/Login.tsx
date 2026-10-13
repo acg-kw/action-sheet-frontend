@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Form, Input, Button, message } from 'antd'
+import { Alert, Form, Input, Button, message } from 'antd'
 import { ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../store'
 import MaintenanceBanner from '../components/MaintenanceBanner'
@@ -11,7 +11,7 @@ export default function Login() {
   // The current password is kept only in memory, to confirm the change.
   const [mustChange, setMustChange] = useState<{ email: string; currentPassword: string } | null>(null)
   const navigate = useNavigate()
-  const { login, changePassword } = useAuthStore()
+  const { login, changePassword, sessionEnded } = useAuthStore()
 
   const onFinish = async (values: { email: string; password?: string }) => {
     setLoading(true)
@@ -104,6 +104,15 @@ export default function Login() {
             Action Sheet System v3.0
           </p>
         </div>
+
+        {sessionEnded && !mustChange && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 20 }}
+            message="Your session has ended. Please sign in again."
+          />
+        )}
 
         {mustChange ? (
           <Form name="change-password" onFinish={onChangePassword} layout="vertical" size="large">
