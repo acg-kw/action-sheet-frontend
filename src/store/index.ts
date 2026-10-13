@@ -12,6 +12,7 @@ export interface ActionSheet {
   deleted: boolean;
   deletedAt?: string;
   deletedBy?: string;
+  purgeOn?: string;
   lastModified: number;
   hasConflict: boolean;
   conflictSeverity?: string;
