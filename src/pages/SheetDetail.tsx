@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
+  Alert,
   Card,
   Tag,
   Button,
@@ -29,6 +30,7 @@ import {
   PaperClipOutlined,
   DownloadOutlined,
   EyeOutlined,
+  UndoOutlined,
 } from '@ant-design/icons'
 import { useSheetsStore, useAuthStore } from '../store'
 import { projectsApi, sheetsApi, attachmentDisplayName } from '../api/client'
@@ -94,6 +96,11 @@ export default function SheetDetail() {
   const isReadOnly = isExm || isViewer
   const isDraft = sheet.workflowState === 'DRAFT'
   const isLocked = !!sheet.overriddenBy
+  const isAdmin = user?.role?.toLowerCase() === 'admin'
+  // A sheet in the Trash is read-only until it is restored (the server refuses
+  // edit, send and status changes too). Restore and permanent delete are admin only.
+  const inTrash = !!sheet.deleted
+  const trashTip = inTrash ? 'In the Trash - restore it first' : undefined
   const recipientCount = Object.keys(sheet.assignedTo || {}).length
   const responseCount = Object.keys(sheet.responses || {}).length
 
@@ -138,6 +145,45 @@ export default function SheetDetail() {
         await deleteSheet(id, user?.email || 'unknown')
         message.success('Sheet deleted')
         navigate('/')
+      },
+    })
+  }
+
+  const handleRestore = () => {
+    if (!id) return
+    Modal.confirm({
+      title: 'Restore Action Sheet',
+      icon: <UndoOutlined />,
+      content: 'Move this sheet out of the Trash and back to the dashboard?',
+      okText: 'Restore',
+      onOk: async () => {
+        try {
+          await sheetsApi.restore(id)
+          message.success('Action sheet restored')
+          fetchSheet(id)
+        } catch {
+          message.error('Could not restore the action sheet')
+        }
+      },
+    })
+  }
+
+  const handleDeletePermanently = () => {
+    if (!id) return
+    Modal.confirm({
+      title: 'Delete permanently',
+      icon: <ExclamationCircleOutlined />,
+      content: 'The sheet, its attachments and its PDF are deleted now. This cannot be undone.',
+      okText: 'Delete permanently',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await sheetsApi.deletePermanently(id)
+          message.success('Action sheet deleted permanently')
+          navigate('/admin/trash')
+        } catch {
+          message.error('Could not delete the action sheet')
+        }
       },
     })
   }
@@ -242,6 +288,15 @@ export default function SheetDetail() {
         <div style={{ flex: 1 }}>
           <h1 className="page-title" style={{ fontSize: '1.4rem' }}>
             {sheet.title}
+            {inTrash && (
+              <Tag
+                color="red"
+                icon={<DeleteOutlined />}
+                style={{ marginLeft: 10, verticalAlign: 'middle', fontWeight: 600 }}
+              >
+                In Trash
+              </Tag>
+            )}
           </h1>
           <span
             style={{
@@ -255,15 +310,18 @@ export default function SheetDetail() {
         </div>
         <div className="detail-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isDraft && !isReadOnly && (
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              size="large"
-              onClick={handleSend}
-              style={{ height: 40 }}
-            >
-              Send to Recipients
-            </Button>
+            <Tooltip title={trashTip}>
+              <Button
+                type="primary"
+                icon={<SendOutlined />}
+                size="large"
+                onClick={handleSend}
+                disabled={inTrash}
+                style={{ height: 40 }}
+              >
+                Send to Recipients
+              </Button>
+            </Tooltip>
           )}
           <Button
             icon={<HistoryOutlined />}
@@ -294,26 +352,32 @@ export default function SheetDetail() {
             </Button>
           )}
           {isGM && !isLocked && !isReadOnly && (
-            <Button
-              icon={<LockOutlined />}
-              size="large"
-              onClick={() => setOverrideModal(true)}
-              style={{ height: 40 }}
-            >
-              GM Override
-            </Button>
+            <Tooltip title={trashTip}>
+              <Button
+                icon={<LockOutlined />}
+                size="large"
+                onClick={() => setOverrideModal(true)}
+                disabled={inTrash}
+                style={{ height: 40 }}
+              >
+                GM Override
+              </Button>
+            </Tooltip>
           )}
           {!isReadOnly && (
-            <Button
-              icon={<EditOutlined />}
-              size="large"
-              onClick={() => navigate(`/sheet/${id}/edit`)}
-              style={{ height: 40 }}
-            >
-              Edit
-            </Button>
+            <Tooltip title={trashTip}>
+              <Button
+                icon={<EditOutlined />}
+                size="large"
+                onClick={() => navigate(`/sheet/${id}/edit`)}
+                disabled={inTrash}
+                style={{ height: 40 }}
+              >
+                Edit
+              </Button>
+            </Tooltip>
           )}
-          {!isReadOnly && (
+          {!isReadOnly && !inTrash && (
             <Button
               danger
               icon={<DeleteOutlined />}
@@ -322,8 +386,48 @@ export default function SheetDetail() {
               style={{ height: 40 }}
             />
           )}
+          {inTrash && isAdmin && (
+            <>
+              <Button
+                icon={<UndoOutlined />}
+                size="large"
+                onClick={handleRestore}
+                style={{ height: 40, color: '#16a34a', borderColor: '#16a34a' }}
+              >
+                Restore
+              </Button>
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                size="large"
+                onClick={handleDeletePermanently}
+                style={{ height: 40 }}
+              >
+                Delete permanently
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {inTrash && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<DeleteOutlined />}
+          style={{ marginBottom: 20 }}
+          message="This sheet is in the Trash"
+          description={
+            <>
+              Deleted{sheet.deletedBy ? ` by ${sheet.deletedBy}` : ''}
+              {sheet.deletedAt ? ` on ${dayjs(sheet.deletedAt).format('DD MMM YYYY, HH:mm')}` : ''}.
+              {sheet.purgeOn ? ` It will be deleted permanently on ${dayjs(sheet.purgeOn).format('DD MMM YYYY')}.` : ''}
+              {' '}It cannot be edited or sent
+              {isAdmin ? ' until it is restored.' : '. Ask an administrator to restore it.'}
+            </>
+          }
+        />
+      )}
 
       {/* Info Cards */}
       <div className="responsive-grid-2col" style={{ marginBottom: 20 }}>
@@ -347,7 +451,7 @@ export default function SheetDetail() {
                 >
                   {getDisplayStatus()}
                 </Tag>
-                {isGM && !isDraft && (
+                {isGM && !isDraft && !inTrash && (
                   <Tooltip title="Change Status (GM)">
                     <Button 
                       type="text" 
@@ -581,6 +685,14 @@ export default function SheetDetail() {
           </div>
         ) : attachments.length > 0 ? (
           <div style={{ marginTop: 16 }}>
+            {inTrash && (
+              <Alert
+                type="info"
+                showIcon
+                style={{ marginBottom: 12 }}
+                message="The attachments are kept, but cannot be opened while the sheet is in the Trash. Restore the sheet to open them."
+              />
+            )}
             {attachments.map((fileName, index) => {
               const displayName = attachmentDisplayName(fileName)
               const downloadUrl = sheetsApi.downloadAttachment(id!, fileName)
@@ -613,6 +725,7 @@ export default function SheetDetail() {
                       <Button
                         type="text"
                         icon={<EyeOutlined />}
+                        disabled={inTrash}
                         onClick={() => window.open(downloadUrl, '_blank')}
                       />
                     </Tooltip>
@@ -620,6 +733,7 @@ export default function SheetDetail() {
                       <Button
                         type="text"
                         icon={<DownloadOutlined />}
+                        disabled={inTrash}
                         onClick={() => {
                           const a = document.createElement('a')
                           a.href = downloadUrl

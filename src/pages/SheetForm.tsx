@@ -564,6 +564,14 @@ export default function SheetForm() {
     if (id) fetchSheet(id)
   }, [id, fetchSheet])
 
+  // A sheet in the Trash cannot be edited (the server refuses it): back to its page.
+  useEffect(() => {
+    if (isEdit && id && currentSheet?.id === id && currentSheet.deleted) {
+      message.warning('This sheet is in the Trash. Restore it before you edit it.')
+      navigate(`/sheet/${id}`, { replace: true })
+    }
+  }, [isEdit, id, currentSheet, navigate])
+
   // Load fixed recipients from the server
   useEffect(() => {
     recipientShortcutsApi.get()

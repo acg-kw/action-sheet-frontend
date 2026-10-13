@@ -108,6 +108,10 @@ export const sheetsApi = {
   restore: (id: string) =>
     api.post(`/api/sheets/${id}/restore`),
 
+  // Admin only. The server refuses a sheet that is not in the Trash.
+  deletePermanently: (id: string) =>
+    api.delete(`/api/admin/trash/${id}`),
+
   getDrafts: () =>
     api.get('/api/sheets/drafts'),
 
