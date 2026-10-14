@@ -134,9 +134,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   loadUser: () => {
     const stored = localStorage.getItem('user');
     // A saved user without a token cannot open anything (every request is
-    // refused), so start on the login page instead.
+    // refused), so start on the login page instead - with the same message
+    // as a session the server ended. (Sign out removes both, so it does not
+    // show the message.)
     if (stored && !localStorage.getItem('authToken')) {
       localStorage.removeItem('user');
+      set({ sessionEnded: true });
       return;
     }
     if (stored) {
