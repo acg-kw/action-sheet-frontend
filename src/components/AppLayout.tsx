@@ -18,6 +18,7 @@ import {
   BarChartOutlined,
   AlertOutlined,
   SearchOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store'
 import { projectsApi, reviewHubApi } from '../api/client'
@@ -181,6 +182,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...(isAdmin ? [
       { type: 'divider' as const },
       { key: '/employees', icon: <TeamOutlined />, label: 'Manage Users' },
+      { key: '/admin/departments', icon: <ApartmentOutlined />, label: 'Departments' },
       { key: '/admin/trash', icon: <DeleteOutlined />, label: 'Trash' },
       { key: '/admin/draft-recovery', icon: <FileTextOutlined />, label: 'Draft Recovery' },
     ] : []),
