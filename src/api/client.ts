@@ -253,6 +253,18 @@ export const draftRecoveryApi = {
   deleteSnapshot: (fileName: string) => api.delete(`/api/admin/draft-recovery/${encodeURIComponent(fileName)}`),
 };
 
+// ========== Departments and the employee sync (Admin) ==========
+// Department names carry "/" and "&", so they go in the body or a query
+// parameter, never in the path. Reading Microsoft 365 can take a while.
+export const departmentsApi = {
+  list: () => api.get('/api/admin/departments'),
+  save: (rows: { department: string; category: string }[]) => api.put('/api/admin/departments', rows),
+  remove: (department: string) => api.delete('/api/admin/departments', { params: { department } }),
+  readFromDirectory: () => api.post('/api/admin/departments/read-from-directory', null, { timeout: 120000 }),
+  syncStatus: () => api.get('/api/admin/directory/status'),
+  syncNow: () => api.post('/api/admin/directory/sync', null, { timeout: 300000 }),
+};
+
 // Stored attachment names start with an 8-character prefix added on upload
 // (e.g. "b6bbcfb1_report.pdf"). Same rule as AttachmentService.displayName.
 export const attachmentDisplayName = (storedName: string) =>
