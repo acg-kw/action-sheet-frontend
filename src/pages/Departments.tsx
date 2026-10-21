@@ -26,6 +26,7 @@ interface SyncRun {
   linkedExisting?: number
   updated?: number
   hidden?: number
+  mappedAutomatically?: number
   reactivated?: number
   leftOut?: Record<string, number>
   changes?: string[]
@@ -38,11 +39,14 @@ interface SyncStatus {
 }
 
 const OTHERS = 'Others'
+// "Changed by" on rows the sync filled itself
+const AUTOMATIC = 'automatic'
 
 /**
  * Department -> Copy-To column, for the employee list from Microsoft 365.
- * Departments are not hard-coded: they come from Microsoft 365 ("Read from
- * Microsoft 365", and every sync adds new ones). Saving applies at once.
+ * The table fills itself: the sync adds every department it meets and maps
+ * it to the column most of its people already have. Here an admin only
+ * corrects a row; saving applies at once and is never overwritten.
  */
 export default function Departments() {
   const navigate = useNavigate()
@@ -187,8 +191,10 @@ export default function Departments() {
       key: 'updated',
       width: 220,
       render: (_: unknown, r: DepartmentRow) => r.updatedAt
-        ? <span style={{ fontSize: 12, color: '#888' }}>{dayjs(r.updatedAt).format('DD MMM YYYY, HH:mm')} · {r.updatedBy}</span>
-        : <span style={{ fontSize: 12, color: '#ccc' }}>Not mapped yet</span>,
+        ? <span style={{ fontSize: 12, color: '#888' }}>
+            {dayjs(r.updatedAt).format('DD MMM YYYY, HH:mm')} · {r.updatedBy === AUTOMATIC ? 'set automatically' : r.updatedBy}
+          </span>
+        : <span style={{ fontSize: 12, color: '#ccc' }}>No match: Others</span>,
     },
     {
       title: '',
@@ -215,7 +221,8 @@ export default function Departments() {
             Departments
           </h2>
           <p style={{ margin: '4px 0 0', color: '#888', fontSize: 13 }}>
-            Which Copy-To column each department's employees appear in. A department that is not mapped goes to Others.
+            Which Copy-To column each department's employees appear in. Filled automatically from the columns people
+            already have; change a row only to correct it. A department with no match goes to Others.
           </p>
         </div>
       </div>
@@ -241,6 +248,7 @@ export default function Departments() {
             {run!.fullRun ? 'Full read' : 'Changes only'}: {run!.kept ?? 0} current employee{run!.kept === 1 ? '' : 's'} seen
             {' '}· added {run!.added ?? 0} · linked {run!.linkedExisting ?? 0} · updated {run!.updated ?? 0}
             {' '}· hidden {run!.hidden ?? 0} · shown again {run!.reactivated ?? 0}
+            {run!.mappedAutomatically ? <> · departments mapped automatically {run!.mappedAutomatically}</> : null}
             {run!.leftOut && Object.keys(run!.leftOut).length > 0 && (
               <> · left out: {Object.entries(run!.leftOut).map(([why, n]) => `${n} ${why}`).join(', ')}</>
             )}
