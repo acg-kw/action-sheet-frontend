@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Avatar, Button, Dropdown, Modal, Input, message, Badge } from 'antd'
+import { Layout, Menu, Avatar, Button, Dropdown, Modal, Input, message, Badge, notification } from 'antd'
 import {
   PlusOutlined,
   DashboardOutlined,
@@ -21,7 +21,7 @@ import {
   ApartmentOutlined,
 } from '@ant-design/icons'
 import { useAuthStore } from '../store'
-import { projectsApi, reviewHubApi } from '../api/client'
+import { projectsApi, reviewHubApi, departmentsApi, DEPARTMENTS_CHANGED } from '../api/client'
 import MaintenanceBanner from './MaintenanceBanner'
 
 const { Sider, Content, Header } = Layout
@@ -105,6 +105,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearInterval(iv)
   }, [])
 
+  // ── New employees from the employee sync (admins: badge + one pop-up per session) ──
+  const [newEmployees, setNewEmployees] = useState(0)
+  const adminUser = user?.role?.toLowerCase() === 'admin'
+  useEffect(() => {
+    if (!adminUser) return
+    const fetchNew = async (popUp: boolean) => {
+      try {
+        const count = (await departmentsApi.newCount()).data?.count || 0
+        setNewEmployees(count)
+        if (popUp && count > 0 && !sessionStorage.getItem('newEmployeesShown')) {
+          sessionStorage.setItem('newEmployeesShown', '1')
+          notification.info({
+            message: `${count} new employee${count === 1 ? '' : 's'} from Active Directory`,
+            description: 'Choose their Copy-To column on the Departments page.',
+            btn: <Button type="primary" size="small" onClick={() => { notification.destroy(); navigate('/admin/departments') }}>Open Departments</Button>,
+            duration: 0,
+          })
+        }
+      } catch { /* silently fail */ }
+    }
+    fetchNew(true)
+    const iv = setInterval(() => fetchNew(true), 5 * 60000)
+    const changed = () => fetchNew(false)
+    window.addEventListener(DEPARTMENTS_CHANGED, changed)
+    return () => { clearInterval(iv); window.removeEventListener(DEPARTMENTS_CHANGED, changed) }
+  }, [adminUser, navigate])
+
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) { message.warning('Enter a project name'); return }
     try {
@@ -182,7 +209,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...(isAdmin ? [
       { type: 'divider' as const },
       { key: '/employees', icon: <TeamOutlined />, label: 'Manage Users' },
-      { key: '/admin/departments', icon: <ApartmentOutlined />, label: 'Departments' },
+      { key: '/admin/departments', icon: <ApartmentOutlined />, label: (
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          Departments
+          {newEmployees > 0 && (
+            <Badge count={newEmployees} size="small" title="New employees to review"
+              style={{ backgroundColor: '#7c3aed', boxShadow: '0 0 0 2px var(--bg-primary)' }} />
+          )}
+        </span>
+      ) },
       { key: '/admin/trash', icon: <DeleteOutlined />, label: 'Trash' },
       { key: '/admin/draft-recovery', icon: <FileTextOutlined />, label: 'Draft Recovery' },
     ] : []),
