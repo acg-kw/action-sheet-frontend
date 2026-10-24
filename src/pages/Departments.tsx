@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Table, Select, Tag, Input, message } from 'antd'
-import { ArrowLeftOutlined, ApartmentOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons'
+import { Button, Table, Select, Tag, Input, Modal, Tooltip, message } from 'antd'
+import {
+  ArrowLeftOutlined, ApartmentOutlined, SaveOutlined, SearchOutlined, PushpinFilled, EyeInvisibleOutlined, EyeOutlined,
+} from '@ant-design/icons'
 import { departmentsApi } from '../api/client'
 import dayjs from 'dayjs'
 
@@ -12,6 +14,8 @@ interface Person {
   department: string | null
   category: string
   fromActiveDirectory: boolean
+  pinned: boolean
+  group: boolean
 }
 
 interface DepartmentRow {
@@ -25,6 +29,7 @@ interface DepartmentRow {
 interface Change {
   id: number
   department: string
+  employee: string | null
   fromCategory: string | null
   toCategory: string
   changedBy: string
@@ -45,6 +50,7 @@ export default function Departments() {
   const navigate = useNavigate()
   const [rows, setRows] = useState<DepartmentRow[]>([])
   const [otherPeople, setOtherPeople] = useState<Person[]>([])
+  const [hiddenPeople, setHiddenPeople] = useState<Person[]>([])
   const [changes, setChanges] = useState<Change[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [edits, setEdits] = useState<Record<string, string>>({})
@@ -60,6 +66,7 @@ export default function Departments() {
   const show = (data: any) => {
     setRows(data.departments || [])
     setOtherPeople(data.otherPeople || [])
+    setHiddenPeople(data.hiddenPeople || [])
     setChanges(data.changes || [])
     setCategories(data.categories || [])
   }
@@ -100,6 +107,38 @@ export default function Departments() {
       setSaving(false)
     }
   }
+
+  // One person: pin a column, unpin, hide or show. Applied at once and logged.
+  const personChange = async (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean }, done: string) => {
+    try {
+      show((await departmentsApi.person(change)).data)
+      message.success(done)
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || 'Failed to save')
+    }
+  }
+
+  const pin = (p: Person, column: string) => Modal.confirm({
+    title: `Put ${p.name} in ${column}?`,
+    content: 'The column is pinned: the employee sync and department changes will not move this person. You can unpin later.',
+    okText: 'Pin',
+    onOk: () => personChange({ email: p.email, column, pinned: true }, `${p.name}: ${column} (pinned)`),
+  })
+
+  const unpin = (p: Person) => Modal.confirm({
+    title: `Unpin ${p.name}?`,
+    content: 'The person follows their department again: a department with a real column moves them to it at once.',
+    okText: 'Unpin',
+    onOk: () => personChange({ email: p.email, pinned: false }, `${p.name}: unpinned`),
+  })
+
+  const hide = (p: Person) => Modal.confirm({
+    title: `Hide "${p.name}" from the Copy-To lists?`,
+    content: 'For entries that are not from Active Directory, such as system groups. You can show it again below.',
+    okText: 'Hide',
+    okType: 'danger',
+    onOk: () => personChange({ email: p.email, hidden: true }, `${p.name}: hidden from the lists`),
+  })
 
   // A search matches a department's name, or any of its people.
   const q = search.trim().toLowerCase()
@@ -155,16 +194,58 @@ export default function Departments() {
     { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 500 }}>{n}</span> },
     { title: 'E-mail', dataIndex: 'email', key: 'email', render: (e: string) => <span style={{ color: '#555' }}>{e}</span> },
     { title: 'Job title', dataIndex: 'jobTitle', key: 'jobTitle', render: (t: string | null) => t || <span style={{ color: '#ccc' }}>—</span> },
-    { title: 'Copy-To column', dataIndex: 'category', key: 'category', width: 170, render: (c: string) => <Tag>{c}</Tag> },
     {
-      title: 'Source', dataIndex: 'fromActiveDirectory', key: 'source', width: 150,
-      render: (ad: boolean) => ad ? <Tag color="blue">Active Directory</Tag> : <Tag>Added by hand</Tag>,
+      title: 'Copy-To column', key: 'category', width: 300,
+      render: (_: unknown, p: Person) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Select
+            size="small"
+            value={p.category}
+            onChange={(v) => pin(p, v)}
+            options={(categories.includes(p.category) ? categories : [p.category, ...categories]).map(c => ({ value: c, label: c }))}
+            style={{ width: 170 }}
+          />
+          {p.pinned && (
+            <Tooltip title="Pinned by an admin: the sync and department changes do not move this person. Click to unpin.">
+              <Tag color="purple" icon={<PushpinFilled />} style={{ cursor: 'pointer' }} onClick={() => unpin(p)}>Pinned</Tag>
+            </Tooltip>
+          )}
+        </span>
+      ),
+    },
+    {
+      title: 'Source', key: 'source', width: 150,
+      render: (_: unknown, p: Person) => p.fromActiveDirectory ? <Tag color="blue">Active Directory</Tag>
+        : p.group ? <Tag color="gold">Group</Tag> : <Tag>Added by hand</Tag>,
+    },
+    {
+      title: '', key: 'hide', width: 60,
+      render: (_: unknown, p: Person) => !p.fromActiveDirectory && (
+        <Tooltip title="Hide from the Copy-To lists (e.g. a system group)">
+          <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => hide(p)} />
+        </Tooltip>
+      ),
+    },
+  ]
+
+  const hiddenColumns = [
+    { title: 'Name', dataIndex: 'name', key: 'name' },
+    { title: 'E-mail', dataIndex: 'email', key: 'email', render: (e: string) => <span style={{ color: '#555' }}>{e}</span> },
+    {
+      title: '', key: 'show', width: 140,
+      render: (_: unknown, p: Person) => (
+        <Button size="small" icon={<EyeOutlined />}
+          onClick={() => personChange({ email: p.email, hidden: false }, `${p.name}: shown in the lists again`)}>
+          Show again
+        </Button>
+      ),
     },
   ]
 
   const changeColumns = [
     { title: 'When', dataIndex: 'changedAt', key: 'when', width: 170, render: when },
     { title: 'Department', dataIndex: 'department', key: 'department' },
+    { title: 'Person', dataIndex: 'employee', key: 'employee', render: (e: string | null) => e || <span style={{ color: '#ccc' }}>—</span> },
     {
       title: 'Change', key: 'change', width: 300,
       render: (_: unknown, c: Change) => c.fromCategory
@@ -187,7 +268,8 @@ export default function Departments() {
           </h2>
           <p style={{ margin: '4px 0 0', color: '#888', fontSize: 13 }}>
             Which Copy-To column each department's employees appear in. New departments from Active Directory
-            appear here automatically as Others. Open a department to see its employees.
+            appear here automatically as Others. Open a department to see its employees; choosing a column for one
+            person pins it, so the sync does not move them.
           </p>
         </div>
       </div>
@@ -246,6 +328,16 @@ export default function Departments() {
             Not under a department above, for example distribution groups. Their column is set on each person.
           </p>
           <Table rowKey="email" columns={personColumns} dataSource={visibleOthers} pagination={false} size="small" />
+        </>
+      )}
+
+      {hiddenPeople.length > 0 && (
+        <>
+          <h3 style={heading}>Hidden from the Copy-To lists ({hiddenPeople.length})</h3>
+          <p style={{ margin: '-4px 0 10px', color: '#888', fontSize: 13 }}>
+            Entries an admin hid, such as system groups. The employee sync does not bring them back.
+          </p>
+          <Table rowKey="email" columns={hiddenColumns} dataSource={hiddenPeople} pagination={false} size="small" />
         </>
       )}
 
