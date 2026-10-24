@@ -258,6 +258,9 @@ export const draftRecoveryApi = {
 export const departmentsApi = {
   overview: () => api.get('/api/admin/departments'),
   save: (rows: { department: string; category: string }[]) => api.put('/api/admin/departments', rows),
+  // One person: pin a column (or unpin), or hide / show an entry not from Active Directory
+  person: (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean }) =>
+    api.put('/api/admin/departments/person', change),
 };
 
 // Stored attachment names start with an 8-character prefix added on upload
