@@ -15,6 +15,7 @@ import DraftRecovery from './pages/DraftRecovery'
 import Settings from './pages/Settings'
 import Projects from './pages/Projects'
 import Trash from './pages/Trash'
+import Departments from './pages/Departments'
 import MonthlyInsights from './pages/MonthlyInsights'
 import ConflictsView from './pages/ConflictsView'
 import ReviewHub from './pages/ReviewHub'
@@ -51,6 +52,7 @@ function AuthenticatedApp() {
             <Route path="/review-hub" element={<ReviewHub />} />
             <Route path="/settings" element={adminOnly(<Settings />)} />
             <Route path="/admin/trash" element={adminOnly(<Trash />)} />
+            <Route path="/admin/departments" element={adminOnly(<Departments />)} />
             <Route path="/admin/draft-recovery" element={adminOnly(<DraftRecovery />)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

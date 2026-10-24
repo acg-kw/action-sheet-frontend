@@ -253,6 +253,13 @@ export const draftRecoveryApi = {
   deleteSnapshot: (fileName: string) => api.delete(`/api/admin/draft-recovery/${encodeURIComponent(fileName)}`),
 };
 
+// ========== Departments: Copy-To column per department (Admin) ==========
+// Department names carry "/" and "&", so they go in the body, never in the path.
+export const departmentsApi = {
+  overview: () => api.get('/api/admin/departments'),
+  save: (rows: { department: string; category: string }[]) => api.put('/api/admin/departments', rows),
+};
+
 // Stored attachment names start with an 8-character prefix added on upload
 // (e.g. "b6bbcfb1_report.pdf"). Same rule as AttachmentService.displayName.
 export const attachmentDisplayName = (storedName: string) =>
