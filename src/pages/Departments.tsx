@@ -4,7 +4,7 @@ import { Button, Table, Select, Tag, Input, Modal, Tooltip, message } from 'antd
 import {
   ArrowLeftOutlined, ApartmentOutlined, SaveOutlined, SearchOutlined, PushpinFilled, EyeInvisibleOutlined, EyeOutlined,
 } from '@ant-design/icons'
-import { departmentsApi } from '../api/client'
+import { departmentsApi, DEPARTMENTS_CHANGED } from '../api/client'
 import dayjs from 'dayjs'
 
 interface Person {
@@ -51,6 +51,7 @@ export default function Departments() {
   const [rows, setRows] = useState<DepartmentRow[]>([])
   const [otherPeople, setOtherPeople] = useState<Person[]>([])
   const [hiddenPeople, setHiddenPeople] = useState<Person[]>([])
+  const [newEmployees, setNewEmployees] = useState<Person[]>([])
   const [changes, setChanges] = useState<Change[]>([])
   const [categories, setCategories] = useState<string[]>([])
   const [edits, setEdits] = useState<Record<string, string>>({})
@@ -67,6 +68,7 @@ export default function Departments() {
     setRows(data.departments || [])
     setOtherPeople(data.otherPeople || [])
     setHiddenPeople(data.hiddenPeople || [])
+    setNewEmployees(data.newEmployees || [])
     setChanges(data.changes || [])
     setCategories(data.categories || [])
   }
@@ -109,9 +111,10 @@ export default function Departments() {
   }
 
   // One person: pin a column, unpin, hide or show. Applied at once and logged.
-  const personChange = async (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean }, done: string) => {
+  const personChange = async (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean; reviewed?: boolean }, done: string) => {
     try {
       show((await departmentsApi.person(change)).data)
+      window.dispatchEvent(new Event(DEPARTMENTS_CHANGED))
       message.success(done)
     } catch (e: any) {
       message.error(e?.response?.data?.message || 'Failed to save')
@@ -228,6 +231,33 @@ export default function Departments() {
     },
   ]
 
+  const newColumns = [
+    { title: 'Name', dataIndex: 'name', key: 'name', render: (n: string) => <span style={{ fontWeight: 500 }}>{n}</span> },
+    { title: 'E-mail', dataIndex: 'email', key: 'email', render: (e: string) => <span style={{ color: '#555' }}>{e}</span> },
+    { title: 'Department', dataIndex: 'department', key: 'department' },
+    { title: 'Job title', dataIndex: 'jobTitle', key: 'jobTitle', render: (t: string | null) => t || <span style={{ color: '#ccc' }}>—</span> },
+    { title: 'Now in', dataIndex: 'category', key: 'now', width: 150, render: (c: string) => <Tag>{c}</Tag> },
+    {
+      title: 'Copy-To column', key: 'choose', width: 330,
+      render: (_: unknown, p: Person) => (
+        <span style={{ display: 'inline-flex', gap: 8 }}>
+          <Select
+            size="small"
+            placeholder="Choose a column"
+            onChange={(v) => pin(p, v)}
+            options={categories.map(c => ({ value: c, label: c }))}
+            style={{ width: 170 }}
+          />
+          <Tooltip title={`Leave ${p.name} in ${p.category}, following the department`}>
+            <Button size="small" onClick={() => personChange({ email: p.email, reviewed: true }, `${p.name}: stays ${p.category}`)}>
+              Keep as is
+            </Button>
+          </Tooltip>
+        </span>
+      ),
+    },
+  ]
+
   const hiddenColumns = [
     { title: 'Name', dataIndex: 'name', key: 'name' },
     { title: 'E-mail', dataIndex: 'email', key: 'email', render: (e: string) => <span style={{ color: '#555' }}>{e}</span> },
@@ -273,6 +303,21 @@ export default function Departments() {
           </p>
         </div>
       </div>
+
+      {newEmployees.length > 0 && (
+        <div style={{
+          background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 10, padding: '14px 18px', marginBottom: 20,
+        }}>
+          <div style={{ fontWeight: 700, color: '#5b21b6', marginBottom: 4 }}>
+            New employees from Active Directory ({newEmployees.length})
+          </div>
+          <p style={{ margin: '0 0 10px', color: '#6b7280', fontSize: 13 }}>
+            The employee sync added these people. Choose their Copy-To column, or keep the one they are in now
+            (their department's column, or Others).
+          </p>
+          <Table rowKey="email" columns={newColumns} dataSource={newEmployees} pagination={false} size="small" />
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <Input
