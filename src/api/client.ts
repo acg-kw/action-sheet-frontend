@@ -258,10 +258,16 @@ export const draftRecoveryApi = {
 export const departmentsApi = {
   overview: () => api.get('/api/admin/departments'),
   save: (rows: { department: string; category: string }[]) => api.put('/api/admin/departments', rows),
-  // One person: pin a column (or unpin), or hide / show an entry not from Active Directory
-  person: (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean }) =>
+  // One person: pin a column (or unpin), hide / show an entry not from Active Directory,
+  // or mark a new employee as reviewed (keeping their column)
+  person: (change: { email: string; column?: string; pinned?: boolean; hidden?: boolean; reviewed?: boolean }) =>
     api.put('/api/admin/departments/person', change),
+  // New employees from the sync waiting for an admin (menu badge)
+  newCount: () => api.get('/api/admin/departments/new-count'),
 };
+
+// Fired by the Departments page after a change, so the menu badge updates at once
+export const DEPARTMENTS_CHANGED = 'departments-changed'
 
 // Stored attachment names start with an 8-character prefix added on upload
 // (e.g. "b6bbcfb1_report.pdf"). Same rule as AttachmentService.displayName.
