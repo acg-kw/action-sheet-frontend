@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, SaveOutlined, EyeOutlined, SendOutlined, ClearOutlin
 import { useSheetsStore, useAuthStore } from '../store'
 import { employeesApi, sheetsApi, projectsApi, recipientShortcutsApi, attachmentDisplayName } from '../api/client'
 import dayjs from 'dayjs'
+import SpellCheck from '../components/spellcheck/SpellCheck'
 
 /* ════════════════════════════════════════
    AUTO-SHRINK INPUT — Smart font sizing
@@ -1111,14 +1112,16 @@ export default function SheetForm() {
         <div className="bi-field-row full">
           <div className="bi-field">
             <span className="bi-field-label">Subject:</span>
-            <AutoShrinkInput 
-              value={subject} 
-              onChange={e => {
-                setSubject(e.target.value)
-                optimisticUpdate('subject', e.target.value)
-              }} 
-              minFontSize={10}
-            />
+            <SpellCheck value={subject}>
+              <AutoShrinkInput 
+                value={subject} 
+                onChange={e => {
+                  setSubject(e.target.value)
+                  optimisticUpdate('subject', e.target.value)
+                }} 
+                minFontSize={10}
+              />
+            </SpellCheck>
             <span className="bi-field-label-ar">:الموضوع</span>
           </div>
         </div>
@@ -1472,15 +1475,17 @@ export default function SheetForm() {
             <span>Response:</span>
             <span style={{ direction: 'rtl' }}>:الرد</span>
           </div>
-          <textarea
-            dir="auto"
-            value={response}
-            onChange={e => {
-              setResponse(e.target.value)
-              optimisticUpdate('response', e.target.value)
-            }}
-            placeholder="Enter response..."
-          />
+          <SpellCheck value={response}>
+            <textarea
+              dir="auto"
+              value={response}
+              onChange={e => {
+                setResponse(e.target.value)
+                optimisticUpdate('response', e.target.value)
+              }}
+              placeholder="Enter response..."
+            />
+          </SpellCheck>
         </div>
 
         {/* ═══ Action Bar (bottom) ═══ */}
