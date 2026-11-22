@@ -35,6 +35,7 @@ import {
 import { useSheetsStore, useAuthStore } from '../store'
 import { projectsApi, sheetsApi, attachmentDisplayName } from '../api/client'
 import dayjs from 'dayjs'
+import SpellCheck from '../components/spellcheck/SpellCheck'
 
 const { TextArea } = Input
 
@@ -621,13 +622,15 @@ export default function SheetDetail() {
           <label style={{ display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>
             Override Note
           </label>
-          <TextArea
-            dir="auto"
-            rows={3}
-            value={overrideData.note}
-            onChange={(e) => setOverrideData((d) => ({ ...d, note: e.target.value }))}
-            placeholder="Reason for override..."
-          />
+          <SpellCheck value={overrideData.note}>
+            <TextArea
+              dir="auto"
+              rows={3}
+              value={overrideData.note}
+              onChange={(e) => setOverrideData((d) => ({ ...d, note: e.target.value }))}
+              placeholder="Reason for override..."
+            />
+          </SpellCheck>
         </div>
       </Modal>
 

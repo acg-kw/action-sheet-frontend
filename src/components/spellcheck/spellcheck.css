@@ -1,0 +1,217 @@
+/* Spell check inside an action sheet (SpellCheck.tsx) */
+
+/* The invisible copy of the field's text: it draws only the lines and glows. */
+.sc-overlay {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: transparent;
+  background: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* A misspelled word: a soft red wave, faded in so it never jumps at you. */
+.sc-miss {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3' viewBox='0 0 6 3'%3E%3Cpath d='M0 2.2 Q1.5 0.4 3 2.2 T6 2.2' fill='none' stroke='%23e11d48' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: 0 100%;
+  background-size: 6px 3px;
+  padding-bottom: 2px;
+  animation: sc-wave-in 420ms ease-out both;
+}
+/* Under the mouse, just before its card opens */
+.sc-miss.sc-hot {
+  background-color: rgba(225, 29, 72, 0.05);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+.sc-miss.sc-open {
+  background-color: rgba(225, 29, 72, 0.09);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.08);
+}
+@keyframes sc-wave-in {
+  from { opacity: 0; background-position: -12px 100%; }
+  to   { opacity: 1; background-position: 0 100%; }
+}
+
+/* The word just replaced: a glow sweeps across it and a line draws under it. */
+.sc-flash {
+  position: relative;
+  border-radius: 5px;
+  background: linear-gradient(100deg, rgba(37, 99, 235, 0.10) 0%, rgba(37, 99, 235, 0.40) 32%, rgba(124, 58, 237, 0.45) 52%, rgba(16, 185, 129, 0.34) 72%, rgba(16, 185, 129, 0.10) 100%);
+  background-size: 300% 100%;
+  mix-blend-mode: multiply;
+  animation: sc-sweep 1.25s cubic-bezier(.22, .9, .24, 1) both;
+}
+.sc-flash::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #10b981);
+  transform-origin: left center;
+  animation: sc-line 1.25s cubic-bezier(.22, .9, .24, 1) both;
+}
+[dir='rtl'] .sc-flash::after, .sc-overlay[dir='rtl'] .sc-flash::after { transform-origin: right center; }
+@keyframes sc-sweep {
+  0%   { background-position: 130% 0; opacity: 0; box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+  12%  { opacity: 1; }
+  40%  { box-shadow: 0 0 18px 3px rgba(124, 58, 237, 0.30); }
+  72%  { opacity: 1; }
+  100% { background-position: -30% 0; opacity: 0; box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+}
+@keyframes sc-line {
+  0%   { transform: scaleX(0); opacity: 1; }
+  45%  { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+/* ── The suggestions card: frosted glass over the sheet ── */
+.sc-card {
+  position: fixed;
+  z-index: 2000;
+  padding: 12px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.66);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 24px 60px -14px rgba(30, 27, 75, 0.32),
+    0 8px 22px -10px rgba(37, 99, 235, 0.28),
+    0 0 0 1px rgba(15, 23, 42, 0.05);
+  font-family: var(--font-sans, 'Segoe UI', sans-serif);
+  transform-origin: top center;
+}
+/* Soft colour moving slowly behind the glass */
+.sc-card-glow {
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background:
+    radial-gradient(closest-side at 30% 30%, rgba(37, 99, 235, 0.22), transparent 70%),
+    radial-gradient(closest-side at 70% 60%, rgba(124, 58, 237, 0.20), transparent 70%),
+    radial-gradient(closest-side at 50% 90%, rgba(236, 72, 153, 0.12), transparent 70%);
+  filter: blur(18px);
+  animation: sc-drift 9s ease-in-out infinite alternate;
+}
+@keyframes sc-drift {
+  from { transform: translate(-4%, -3%) rotate(0deg); }
+  to   { transform: translate(4%, 3%) rotate(25deg); }
+}
+.sc-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sc-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #4338ca;
+  background: rgba(99, 102, 241, 0.12);
+}
+.sc-word {
+  font-size: 14px;
+  font-weight: 600;
+  color: #9f1239;
+  text-decoration: underline wavy rgba(225, 29, 72, 0.75);
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.sc-pill {
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.2;
+  padding: 7px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.sc-pill.sc-best {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #2563eb 0%, #6d28d9 100%);
+  box-shadow: 0 6px 16px -6px rgba(79, 70, 229, 0.65);
+}
+.sc-pill.sc-active:not(.sc-best) {
+  background: #fff;
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+.sc-pill.sc-best.sc-active { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 8px 18px -6px rgba(79, 70, 229, 0.7); }
+.sc-pill:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.sc-none {
+  font-size: 13px;
+  color: #64748b;
+  padding: 4px 2px;
+}
+.sc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.07);
+}
+.sc-ignore {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background: none;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sc-ignore:hover { background: rgba(15, 23, 42, 0.06); color: #0f172a; }
+.sc-hint { font-size: 11px; color: #94a3b8; }
+
+/* The chosen word on its way into the text */
+.sc-ghost {
+  position: fixed;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  border-radius: 999px;
+  font-family: var(--font-sans, 'Segoe UI', sans-serif);
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb 0%, #6d28d9 100%);
+  box-shadow: 0 10px 26px -8px rgba(79, 70, 229, 0.7);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-miss, .sc-flash, .sc-flash::after, .sc-card-glow { animation: none; }
+  .sc-flash { background: rgba(37, 99, 235, 0.14); }
+}
